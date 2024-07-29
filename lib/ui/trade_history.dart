@@ -1,8 +1,9 @@
-import 'dart:convert';
+import 'package:crypto_profit_loss_calculator/model/pnl.dart';
+import 'package:crypto_profit_loss_calculator/ui/pnl_history.dart';
 
-import 'package:crypto_profit_loss_calculator/trade_history_edit.dart';
+import '../services/database_helper.dart';
+import 'trade_history_edit.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class TradeHistory extends StatefulWidget {
   const TradeHistory({super.key});
@@ -11,58 +12,56 @@ class TradeHistory extends StatefulWidget {
 }
 
 class _TradeHistoryState extends State<TradeHistory> {
-  late SharedPreferences prefs;
+  DatabaseHelper databaseHelper = DatabaseHelper();
+  int? lenght;
+  bool readed = false;
   @override
   void initState() {
     super.initState();
     _loadData();
   }
 
+  List<CoinPnL> coinPnL = [];
+
   _loadData() async {
-    prefs = await SharedPreferences.getInstance();
+    coinPnL = await databaseHelper.getCoinPnLList();
+    int lenghtLocal;
+
     setState(() {
-      String tradeHistoryString = prefs.getString("tradeHistory") ?? '[]';
-      tradeHistory =
-          List<Map<String, dynamic>>.from(json.decode(tradeHistoryString));
+      lenghtLocal = coinPnL.length;
+
+      lenght = lenghtLocal;
+      readed = true;
     });
   }
 
-  _saveData() {
-    // Verileri kaydet
-
-    prefs.setString("tradeHistory", json.encode(tradeHistory));
-  }
-
-  @override
-  void dispose() {
-    _saveData(); // Verileri dispose olduğunda kaydet
-    super.dispose();
-  }
-
-  List<Map<String, dynamic>> tradeHistory = [
-    // {"s": "btctry", "c": "123", "p": "45", "pnl": "0"},
-    // {"s": "btctry", "c": "123", "p": "45", "pnl": "-1"},
-    // {"s": "btctry", "c": "123", "p": "45", "pnl": "12"},
-    // {"s": "btctry", "c": "123", "p": "45", "pnl": "12"}
-  ];
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
           title: Text('Crypto Profit/Loss History'),
+          actions: [
+            IconButton(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(
+                      builder: (context) {
+                        print("line");
+                        return Container();
+                        // return PnLHistory(0);
+                      },
+                    )),
+                icon: Icon(Icons.data_thresholding_sharp)),
+          ],
         ),
         body: Container(
             child: ListView.builder(
-          itemCount: tradeHistory.length,
-          
+          itemCount: coinPnL.length,
           itemBuilder: (BuildContext context, int index) {
             return Padding(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Card(
                 color: double.parse(
-                            tradeHistory[tradeHistory.length - index - 1]
-                                ["pnl"]!) <=
+                            coinPnL[coinPnL.length - index - 1].currentPnL!) <=
                         0
                     ? Colors.red
                     : Colors.green,
@@ -77,28 +76,25 @@ class _TradeHistoryState extends State<TradeHistory> {
                           Navigator.push(context, MaterialPageRoute(
                             builder: (context) {
                               return TradeHistoryEdit(
-                                  tradeHistory.length - index - 1);
+                                  coinPnL[coinPnL.length - index - 1].id!);
                             },
                           ));
                         },
                       ),
                       Column(
                         children: [
-                          Text(tradeHistory[tradeHistory.length - index - 1]
-                              ["s"]),
+                          Text(coinPnL[coinPnL.length - index - 1].coinName!),
                           Text(
                             "pnl: %" +
-                                tradeHistory[tradeHistory.length - index - 1]
-                                    ["pnl"],
+                                coinPnL[coinPnL.length - index - 1].currentPnL!,
                           ),
                         ],
                       ),
                       Column(
                         children: [
-                          Text(tradeHistory[tradeHistory.length - index - 1]
-                              ["c"]),
+                          Text(coinPnL[coinPnL.length - index - 1].buyPrice!),
                           Text(
-                            tradeHistory[tradeHistory.length - index - 1]["p"],
+                            coinPnL[coinPnL.length - index - 1].currentPrice!,
                           ),
                         ],
                       ),
@@ -106,10 +102,10 @@ class _TradeHistoryState extends State<TradeHistory> {
                         child: Icon(Icons.clear_rounded),
                         onLongPress: () {
                           setState(() {
-                            tradeHistory
-                                .removeAt(tradeHistory.length - index - 1);
+                            databaseHelper.deletePnl(
+                                coinPnL[coinPnL.length - index - 1].id!);
+                            _loadData();
                           });
-                          _saveData();
                         },
                       ),
                     ],

@@ -1,24 +1,22 @@
-import 'dart:convert';
-
-import 'package:crypto_profit_loss_calculator/trade_history.dart';
+import 'package:crypto_profit_loss_calculator/model/pnl.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/database_helper.dart';
+import 'trade_history.dart';
 
+// ignore: must_be_immutable
 class TradeHistoryEdit extends StatefulWidget {
-  // String coinSymbol;
-  // String coinCost;
-  // String currentPrice;
-  int currentIndex;
-  TradeHistoryEdit(
-      this.currentIndex, //, this.coinSymbol, this.coinCost, this.currentPrice,
-      {super.key});
+  int id;
+  TradeHistoryEdit(this.id, {super.key});
   @override
   State<TradeHistoryEdit> createState() => _TradeHistoryEditState();
 }
 
 class _TradeHistoryEditState extends State<TradeHistoryEdit> {
-  late SharedPreferences prefs;
-
+  DatabaseHelper databaseHelper = DatabaseHelper();
+  late CoinPnL coinPnL;
+  bool readed = false;
+  double currentPnL = 0; //%
+  double balancePnL = 0;
   @override
   void initState() {
     super.initState();
@@ -26,47 +24,43 @@ class _TradeHistoryEditState extends State<TradeHistoryEdit> {
   }
 
   _loadData() async {
-    prefs = await SharedPreferences.getInstance();
-    setState(() {
-      prefs.setString("commission", commissionController.text);
-      String tradeHistoryString = prefs.getString("tradeHistory") ?? '[]';
-      tradeHistory =
-          List<Map<String, dynamic>>.from(json.decode(tradeHistoryString));
-      coinNameController.text = tradeHistory[widget.currentIndex]["s"];
-      buyPriceController.text = tradeHistory[widget.currentIndex]["c"];
-      currentPriceController.text = tradeHistory[widget.currentIndex]["p"];
-    });
+    coinPnL = await databaseHelper.getCoinPnLbyId(widget.id);
+    coinNameController.text = coinPnL.coinName!;
+    buyPriceController.text = coinPnL.buyPrice!;
+    currentPriceController.text = coinPnL.currentPrice!;
+    commissionController.text = coinPnL.commission!;
+    balanceController.text = coinPnL.balance!;
+    currentPnL = double.parse(coinPnL.currentPnL!);
+    balancePnL = double.parse(coinPnL.balancePnL!);
+    readed = true;
   }
 
   _saveData() {
-    // Verileri kaydet
-    prefs.setString("commission", commissionController.text);
-    prefs.setString("tradeHistory", json.encode(tradeHistory));
-  }
-
-  @override
-  void dispose() {
-    _saveData(); // Verileri dispose olduğunda kaydet
-    super.dispose();
+    calculate(context);
+    databaseHelper.updateCoinPnL(CoinPnL.withID(
+        coinPnL.id,
+        coinNameController.text,
+        buyPriceController.text,
+        currentPriceController.text,
+        balanceController.text,
+        currentPnL.toStringAsFixed(2),
+        balancePnL.toStringAsFixed(2),
+        commissionController.text,
+        coinPnL.date));
   }
 
   TextEditingController coinNameController = TextEditingController();
   TextEditingController buyPriceController = TextEditingController();
   TextEditingController currentPriceController = TextEditingController();
   TextEditingController commissionController = TextEditingController();
-  List<Map<String, dynamic>> tradeHistory = [
-    // {"s": "btctry", "c": "123", "p": "45", "pnl": "0"},
-    // {"s": "btctry", "c": "123", "p": "45", "pnl": "-1"},
-    // {"s": "btctry", "c": "123", "p": "45", "pnl": "12"},
-    // {"s": "btctry", "c": "123", "p": "45", "pnl": "12"}
-  ];
-  double currentPnL = 0;
+  TextEditingController balanceController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Crypto Profit/Loss Edit'),
+          title: const Text('Crypto Profit/Loss Edit'),
         ),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -97,8 +91,15 @@ class _TradeHistoryEditState extends State<TradeHistoryEdit> {
                     controller: currentPriceController,
                     decoration: InputDecoration(labelText: 'Current Price'),
                     textInputAction: TextInputAction.next,
-                    onSubmitted: (value) => //submitfunc(context),
-                        calculate(context),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                SizedBox(height: 3),
+                ListTile(
+                  title: TextField(
+                    controller: balanceController,
+                    decoration: InputDecoration(labelText: 'Balance Optional'),
+                    textInputAction: TextInputAction.next,
                     keyboardType: TextInputType.number,
                   ),
                 ),
@@ -114,6 +115,7 @@ class _TradeHistoryEditState extends State<TradeHistoryEdit> {
                     keyboardType: TextInputType.number,
                   ),
                 ),
+                SizedBox(height: 3),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 15),
                   child: Column(
@@ -129,11 +131,17 @@ class _TradeHistoryEditState extends State<TradeHistoryEdit> {
                                 color:
                                     currentPnL <= 0 ? Colors.red : Colors.green,
                                 child:
-                                    Text("%" + currentPnL.toStringAsFixed(4))),
+                                    Text("%" + currentPnL.toStringAsFixed(2))),
                           ),
                           // SizedBox(
                           //   width: 9,
                           // ),
+                          Container(
+                              padding: EdgeInsets.all(8),
+                              color:
+                                  balancePnL <= 0 ? Colors.red : Colors.green,
+                              child:
+                                  Text(balancePnL.toStringAsFixed(1) + " \$")),
                         ],
                       ),
                       Row(
@@ -142,7 +150,6 @@ class _TradeHistoryEditState extends State<TradeHistoryEdit> {
                           TextButton(
                             onPressed: () {
                               calculate(context);
-                              _saveData();
                             },
                             child: Container(
                               // padding: EdgeInsets.all(12),
@@ -183,20 +190,6 @@ class _TradeHistoryEditState extends State<TradeHistoryEdit> {
     if (coinNameController.text.isNotEmpty &&
         buyPriceController.text.isNotEmpty &&
         currentPriceController.text.isNotEmpty) {
-      setState(() {
-        tradeHistory[widget.currentIndex]["s"] = coinNameController.text;
-        tradeHistory[widget.currentIndex]["c"] = buyPriceController.text;
-        tradeHistory[widget.currentIndex]["p"] = currentPriceController.text;
-        tradeHistory[widget.currentIndex]["pnl"] =
-            currentPnL.toStringAsFixed(4);
-
-        // .add({
-        //   "s": coinNameController.text,
-        //   "c": buyPriceController.text,
-        //   "p": currentPriceController.text,
-        //   "pnl": currentPnL.toStringAsFixed(3)
-        // });
-      });
       _saveData();
       Navigator.pop(context);
       Navigator.pop(context);
@@ -204,7 +197,7 @@ class _TradeHistoryEditState extends State<TradeHistoryEdit> {
         context,
         MaterialPageRoute(
           builder: (context) {
-            return TradeHistory();
+            return const TradeHistory();
           },
         ),
       );
@@ -224,6 +217,10 @@ class _TradeHistoryEditState extends State<TradeHistoryEdit> {
                     100) -
                 100) *
             (1 - ((double.parse(commissionController.text)) * 2));
+        if (balanceController.text.isEmpty) {
+          balanceController.text = "0";
+        }
+        balancePnL = double.parse(balanceController.text) * (currentPnL / 100);
       });
     }
   }
