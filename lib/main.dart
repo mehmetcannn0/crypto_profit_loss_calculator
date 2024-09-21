@@ -27,38 +27,24 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> with RouteAware {
   late SharedPreferences prefs;
   int _buttonCount = 0;
+  late Future<List<Widget>> _buttonsFuture; // Future değerini saklayan değişken
 
   @override
   void initState() {
     super.initState();
     _loadButtonCount();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // RouteObserver'ı dinleyici olarak ekleyin
-    RouteObserver<ModalRoute<void>>().subscribe(this, ModalRoute.of(context)!);
-  }
-
-  @override
-  void dispose() {
-    // RouteObserver'dan dinleyiciyi kaldırın
-    RouteObserver<ModalRoute<void>>().unsubscribe(this);
-    super.dispose();
+    _buttonsFuture = _buildButtons(); // Future'ı bir kez oluştur
   }
 
   @override
   void didPopNext() {
     // Bu method MainScreen'e geri dönüldüğünde çağrılır
     _loadButtonCount();
-
+    _buttonsFuture = _buildButtons();
     setState(() {});
   }
 
   Future<void> _loadButtonCount() async {
-    print("buton sayısı guncellendı");
-
     prefs = await SharedPreferences.getInstance();
     setState(() {
       _buttonCount = prefs.getInt('processCount') ?? 0;
@@ -66,13 +52,11 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
   }
 
   Future<List<Widget>> _buildButtons() async {
-    print("butonlar guncellendı");
     List<Widget> buttons = [];
 
     prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _buttonCount = prefs.getInt('processCount') ?? 0;
-    });
+    _buttonCount = prefs.getInt('processCount') ?? 0;
+
     // En üstte yeni ekleme butonu
     buttons.add(
       InkWell(
@@ -107,12 +91,20 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
       String commission = prefs.getString("commission" + i.toString()) ?? '';
 
       if (coinName != "") {
-        currentPnL =
-            ((double.parse(currentPrice) / double.parse(buyPrice) * 100) -
-                    100) *
-                (1 - ((double.parse(commission)) * 2));
+        try {
+          currentPnL =
+              ((double.parse(currentPrice) / double.parse(buyPrice) * 100) -
+                      100) *
+                  (1 - ((double.parse(commission)) * 2));
+        } catch (e) {
+          currentPnL = 0;
+        }
+        try {
+          balancePnL = double.parse(balance) * (currentPnL / 100);
+        } catch (e) {
+          balancePnL = 0;
+        }
 
-        balancePnL = double.parse(balance) * (currentPnL / 100);
         buttons.add(
           Padding(
             padding: const EdgeInsets.all(8.0),
@@ -125,7 +117,6 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
               child: ListTile(
                 leadingAndTrailingTextStyle: TextStyle(fontSize: 20),
                 onTap: () => _navigateToProcessPage(i),
-                // tileColor: Theme.of(context).primaryColorLight,
                 textColor: Theme.of(context).primaryColorDark,
                 leading: Text('$i'),
                 title: Text(coinName),
@@ -133,7 +124,6 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(currentPnL.toStringAsFixed(2) + " %"),
-                    // Text("$balancePnL"),
                   ],
                 ),
                 subtitle:
@@ -154,8 +144,9 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
         builder: (context) => Process(buttonId),
       ),
     );
-    if (isUpdated == true) {
+    if (isUpdated != null) {
       _loadButtonCount();
+      _buttonsFuture = _buildButtons();
       setState(() {});
     }
   }
@@ -176,16 +167,12 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
         title: Text('Crypto Profit/Loss Calculator'),
       ),
       body: FutureBuilder<List<Widget>>(
-        future: _buildButtons(),
+        future:
+            _buttonsFuture, // Future sadece bir kez oluşturulup kullanılıyor
         builder: (context, snapshot) {
-          // if (snapshot.connectionState == ConnectionState.waiting) {
-          //   return Center(child: CircularProgressIndicator());
-          // } else
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else {
-            _buttonCount;
-
             return SingleChildScrollView(
               child: Center(
                 child: Column(
