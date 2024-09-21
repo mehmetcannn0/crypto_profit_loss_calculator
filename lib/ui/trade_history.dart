@@ -13,7 +13,7 @@ class TradeHistory extends StatefulWidget {
 
 class _TradeHistoryState extends State<TradeHistory> {
   DatabaseHelper databaseHelper = DatabaseHelper();
-  int? lenght;
+  int? length;
   bool readed = false;
   @override
   void initState() {
@@ -25,12 +25,9 @@ class _TradeHistoryState extends State<TradeHistory> {
 
   _loadData() async {
     coinPnL = await databaseHelper.getCoinPnLList();
-    int lenghtLocal;
 
     setState(() {
-      lenghtLocal = coinPnL.length;
-
-      lenght = lenghtLocal;
+      length = coinPnL.length;
       readed = true;
     });
   }
@@ -46,8 +43,8 @@ class _TradeHistoryState extends State<TradeHistory> {
                 onPressed: () => Navigator.push(context, MaterialPageRoute(
                       builder: (context) {
                         print("line");
-                        return Container();
-                        // return PnLHistory(0);
+                        // return Container();
+                        return PnLHistory(0);
                       },
                     )),
                 icon: Icon(Icons.data_thresholding_sharp)),
