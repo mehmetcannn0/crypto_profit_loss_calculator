@@ -30,7 +30,8 @@ class _ProcessState extends State<Process> {
     prefs = await SharedPreferences.getInstance();
     setState(() {
       coinNameController.text =
-          prefs.getString("coinName" + widget.id.toString()) ?? '';
+          prefs.getString("coinName" + widget.id.toString())!.toUpperCase() ??
+              '';
       buyPriceController.text =
           prefs.getString("buyPrice" + widget.id.toString()) ?? '';
       currentPriceController.text =
@@ -50,7 +51,8 @@ class _ProcessState extends State<Process> {
       prefs.setInt("processCount", processCount + 1);
     }
     // Verileri kaydet
-    prefs.setString("coinName" + widget.id.toString(), coinNameController.text);
+    prefs.setString("coinName" + widget.id.toString(),
+        coinNameController.text.toUpperCase());
     prefs.setString("buyPrice" + widget.id.toString(), buyPriceController.text);
     prefs.setString(
         "currentPrice" + widget.id.toString(), currentPriceController.text);
@@ -264,7 +266,7 @@ class _ProcessState extends State<Process> {
         currentPriceController.text.isNotEmpty) {
       setState(() {
         databaseHelper.addPnl(CoinPnL(
-            coinNameController.text,
+            coinNameController.text.toUpperCase(),
             buyPriceController.text,
             currentPriceController.text,
             balanceController.text,
