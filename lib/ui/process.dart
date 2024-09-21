@@ -75,161 +75,172 @@ class _ProcessState extends State<Process> {
   double balancePnL = 0;
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        actions: [
-          IconButton(
-              onPressed: () => Navigator.push(context, MaterialPageRoute(
-                    builder: (context) {
-                      return TradeHistory();
-                    },
-                  )),
-              icon: Icon(Icons.history))
-        ],
-        title: Text('Crypto Profit/Loss Calculator'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              ListTile(
-                title: TextField(
-                  controller: coinNameController,
-                  decoration: InputDecoration(labelText: 'Coin Name'),
-                  textInputAction: TextInputAction.next,
-                ),
-                trailing: Text("/usdt"),
-              ),
-              SizedBox(height: 3),
-              ListTile(
-                title: TextField(
-                  controller: buyPriceController,
-                  decoration: InputDecoration(labelText: 'Buy Price'),
-                  textInputAction: TextInputAction.next,
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              SizedBox(height: 3),
-              ListTile(
-                title: TextField(
-                  controller: currentPriceController,
-                  decoration: InputDecoration(labelText: 'Current Price'),
-                  textInputAction: TextInputAction.next,
-                  keyboardType: TextInputType.number,
-                ),
-                trailing: IconButton(
-                    onPressed: () => (coinNameController.text.isNotEmpty &&
-                            buyPriceController.text.isNotEmpty)
-                        ? mexcapi()
-                        : () {},
-                    icon: Icon(
-                      Icons.replay,
-                      color: apiStatus == 0
-                          ? Colors.red
-                          : apiStatus == 1
-                              ? Colors.green
-                              : apiStatus == 2
-                                  ? Colors.amber
-                                  : Colors.white,
+    return WillPopScope(
+      onWillPop: () async {
+        // Geri tuşuna basıldığında false döndürülür
+        Navigator.pop(context, true);
+        return true; // Sayfayı manuel olarak kapattığımız için burada false döndürüyoruz
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          actions: [
+            IconButton(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(
+                      builder: (context) {
+                        return TradeHistory();
+                      },
                     )),
-              ),
-              SizedBox(height: 3),
-              ListTile(
-                title: TextField(
-                  controller: balanceController,
-                  decoration: InputDecoration(labelText: 'Balance Optional'),
-                  textInputAction: TextInputAction.next,
-                  keyboardType: TextInputType.number,
+                icon: Icon(Icons.history))
+          ],
+          title: Text('Crypto Profit/Loss Calculator'),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                ListTile(
+                  title: TextField(
+                    controller: coinNameController,
+                    decoration: InputDecoration(labelText: 'Coin Name'),
+                    textInputAction: TextInputAction.next,
+                  ),
+                  trailing: Text("/usdt"),
                 ),
-              ),
-              SizedBox(height: 3),
-              ListTile(
-                title: TextField(
-                  controller: commissionController,
-                  decoration: InputDecoration(labelText: 'Commission Optional'),
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (value) => //submitfunc(context),
-                      calculate(context),
-                  keyboardType: TextInputType.number,
+                SizedBox(height: 3),
+                ListTile(
+                  title: TextField(
+                    controller: buyPriceController,
+                    decoration: InputDecoration(labelText: 'Buy Price'),
+                    textInputAction: TextInputAction.next,
+                    keyboardType: TextInputType.number,
+                  ),
                 ),
-              ),
-              SizedBox(height: 3),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 15),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Container(
+                SizedBox(height: 3),
+                ListTile(
+                  title: TextField(
+                    controller: currentPriceController,
+                    decoration: InputDecoration(labelText: 'Current Price'),
+                    textInputAction: TextInputAction.next,
+                    keyboardType: TextInputType.number,
+                  ),
+                  trailing: IconButton(
+                      onPressed: () => (coinNameController.text.isNotEmpty &&
+                              buyPriceController.text.isNotEmpty)
+                          ? mexcapi()
+                          : () {},
+                      icon: Icon(
+                        Icons.replay,
+                        color: apiStatus == 0
+                            ? Colors.red
+                            : apiStatus == 1
+                                ? Colors.green
+                                : apiStatus == 2
+                                    ? Colors.amber
+                                    : Colors.white,
+                      )),
+                ),
+                SizedBox(height: 3),
+                ListTile(
+                  title: TextField(
+                    controller: balanceController,
+                    decoration: InputDecoration(labelText: 'Balance Optional'),
+                    textInputAction: TextInputAction.next,
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                SizedBox(height: 3),
+                ListTile(
+                  title: TextField(
+                    controller: commissionController,
+                    decoration:
+                        InputDecoration(labelText: 'Commission Optional'),
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (value) => //submitfunc(context),
+                        calculate(context),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                SizedBox(height: 3),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 15),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Container(
+                                padding: EdgeInsets.all(8),
+                                color:
+                                    currentPnL <= 0 ? Colors.red : Colors.green,
+                                child:
+                                    Text("%" + currentPnL.toStringAsFixed(2))),
+                          ),
+                          // SizedBox(
+                          //   width: 9,
+                          // ),
+                          Container(
                               padding: EdgeInsets.all(8),
                               color:
-                                  currentPnL <= 0 ? Colors.red : Colors.green,
-                              child: Text("%" + currentPnL.toStringAsFixed(2))),
-                        ),
-                        // SizedBox(
-                        //   width: 9,
-                        // ),
-                        Container(
-                            padding: EdgeInsets.all(8),
-                            color: balancePnL <= 0 ? Colors.red : Colors.green,
-                            child: Text(balancePnL.toStringAsFixed(1) + " \$")),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            calculate(context);
-                            _saveData();
-                          },
-                          child: Container(
-                            // padding: EdgeInsets.all(12),
-                            // color: Colors.black26,
-                            child: Text(
-                              style: TextStyle(color: Colors.white),
-                              'Calculate',
+                                  balancePnL <= 0 ? Colors.red : Colors.green,
+                              child:
+                                  Text(balancePnL.toStringAsFixed(1) + " \$")),
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              calculate(context);
+                              _saveData();
+                            },
+                            child: Container(
+                              // padding: EdgeInsets.all(12),
+                              // color: Colors.black26,
+                              child: Text(
+                                style: TextStyle(color: Colors.white),
+                                'Calculate',
+                              ),
                             ),
                           ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            clearfunc();
-                          },
-                          child: Container(
-                            // padding: EdgeInsets.all(12),
-                            // color: Colors.black26,
-                            child: Text(
-                              style: TextStyle(color: Colors.white),
-                              'Clear',
+                          TextButton(
+                            onPressed: () {
+                              clearfunc();
+                            },
+                            child: Container(
+                              // padding: EdgeInsets.all(12),
+                              // color: Colors.black26,
+                              child: Text(
+                                style: TextStyle(color: Colors.white),
+                                'Clear',
+                              ),
                             ),
                           ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            submitfunc(context);
-                          },
-                          child: Container(
-                            // padding: EdgeInsets.all(12),
-                            // color: Colors.black26,
-                            child: Text(
-                              style: TextStyle(color: Colors.white),
-                              'Save',
+                          TextButton(
+                            onPressed: () {
+                              submitfunc(context);
+                            },
+                            child: Container(
+                              // padding: EdgeInsets.all(12),
+                              // color: Colors.black26,
+                              child: Text(
+                                style: TextStyle(color: Colors.white),
+                                'Save',
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -280,15 +291,24 @@ class _ProcessState extends State<Process> {
         if (commissionController.text.isEmpty) {
           commissionController.text = "0";
         }
-        currentPnL = ((double.parse(currentPriceController.text) /
-                    double.parse(buyPriceController.text) *
-                    100) -
-                100) *
-            (1 - ((double.parse(commissionController.text)) * 2));
+        try {
+          currentPnL = ((double.parse(currentPriceController.text) /
+                      double.parse(buyPriceController.text) *
+                      100) -
+                  100) *
+              (1 - ((double.parse(commissionController.text)) * 2));
+        } catch (e) {
+          currentPnL = 0;
+        }
         if (balanceController.text.isEmpty) {
           balanceController.text = "0";
         }
-        balancePnL = double.parse(balanceController.text) * (currentPnL / 100);
+        try {
+          balancePnL =
+              double.parse(balanceController.text) * (currentPnL / 100);
+        } catch (e) {
+          balancePnL = 0;
+        }
       });
     }
   }
@@ -319,7 +339,8 @@ class _ProcessState extends State<Process> {
         final Map<String, dynamic> coinData = data[0];
         final double coinPrice = double.parse(coinData['last']);
         print('Coin Price: $coinPrice');
-        currentPriceController.text = coinPrice.toStringAsFixed(2);
+        // currentPriceController.text = coinPrice.toStringAsFixed(2);
+        currentPriceController.text = coinPrice.toString();
         // Snackbar'ı güncelleyerek işlem başarılı mesajını göster
         final successSnackBar = SnackBar(
             content: Text('Data fetched successfully from Mexc!'),
@@ -350,5 +371,4 @@ class _ProcessState extends State<Process> {
       });
     }
   }
-
 }
