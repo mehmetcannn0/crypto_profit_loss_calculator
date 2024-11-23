@@ -30,42 +30,39 @@ class _ProcessState extends State<Process> {
     prefs = await SharedPreferences.getInstance();
     setState(() {
       coinNameController.text =
-          prefs.getString("coinName" + widget.id.toString())!.toUpperCase() ??
-              '';
-      buyPriceController.text =
-          prefs.getString("buyPrice" + widget.id.toString()) ?? '';
+          prefs.getString("coinName${widget.id}")?.toUpperCase() ?? '';
+      buyPriceController.text = prefs.getString("buyPrice${widget.id}") ?? '';
       currentPriceController.text =
-          prefs.getString("currentPrice" + widget.id.toString()) ?? '';
-      balanceController.text =
-          prefs.getString("balance" + widget.id.toString()) ?? '';
+          prefs.getString("currentPrice${widget.id}") ?? '';
+      balanceController.text = prefs.getString("balance${widget.id}") ?? '';
       commissionController.text =
-          prefs.getString("commission" + widget.id.toString()) ?? '';
+          prefs.getString("commission${widget.id}") ?? '';
     });
-    calculate(context);
+    calculate();
   }
 
   _saveData() {
-    //button count +1 ıse yenı eklenecek degılse update yapılacak
-    int processCount = prefs.getInt('processCount') ?? 0;
-    if (processCount + 1 == widget.id) {
-      prefs.setInt("processCount", processCount + 1);
+    if (_areInputsValid()) {
+      //button count +1 ıse yenı eklenecek degılse update yapılacak
+      int processCount = prefs.getInt('processCount') ?? 0;
+      if (processCount + 1 == widget.id) {
+        prefs.setInt("processCount", processCount + 1);
+      }
+      // Verileri kaydet
+      prefs.setString(
+          "coinName${widget.id}", coinNameController.text.toUpperCase());
+      prefs.setString("buyPrice${widget.id}", buyPriceController.text);
+      prefs.setString("currentPrice${widget.id}", currentPriceController.text);
+      prefs.setString("balance${widget.id}", balanceController.text);
+      prefs.setString("commission${widget.id}", commissionController.text);
     }
-    // Verileri kaydet
-    prefs.setString("coinName" + widget.id.toString(),
-        coinNameController.text.toUpperCase());
-    prefs.setString("buyPrice" + widget.id.toString(), buyPriceController.text);
-    prefs.setString(
-        "currentPrice" + widget.id.toString(), currentPriceController.text);
-    prefs.setString("balance" + widget.id.toString(), balanceController.text);
-    prefs.setString(
-        "commission" + widget.id.toString(), commissionController.text);
   }
 
-  @override
-  void dispose() {
-    _saveData(); // Verileri dispose olduğunda kaydet
-    super.dispose();
-  }
+  // @override
+  // void dispose() {
+  //   _saveData(); // Verileri dispose olduğunda kaydet
+  //   super.dispose();
+  // }
 
   TextEditingController coinNameController = TextEditingController();
   TextEditingController buyPriceController = TextEditingController();
@@ -79,9 +76,10 @@ class _ProcessState extends State<Process> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        // Geri tuşuna basıldığında false döndürülür
-        Navigator.pop(context, true);
-        return true; // Sayfayı manuel olarak kapattığımız için burada false döndürüyoruz
+        if (_areInputsValid()) {
+          Navigator.pop(context, true);
+        }
+        return true;
       },
       child: Scaffold(
         appBar: AppBar(
@@ -159,8 +157,7 @@ class _ProcessState extends State<Process> {
                     decoration:
                         InputDecoration(labelText: 'Commission Optional'),
                     textInputAction: TextInputAction.done,
-                    onSubmitted: (value) => //submitfunc(context),
-                        calculate(context),
+                    onSubmitted: (value) => calculate(),
                     keyboardType: TextInputType.number,
                   ),
                 ),
@@ -198,8 +195,9 @@ class _ProcessState extends State<Process> {
                         children: [
                           TextButton(
                             onPressed: () {
-                              calculate(context);
-                              _saveData();
+                              if (calculate()) {
+                                _saveData();
+                              }
                             },
                             child: Container(
                               // padding: EdgeInsets.all(12),
@@ -225,7 +223,7 @@ class _ProcessState extends State<Process> {
                           ),
                           TextButton(
                             onPressed: () {
-                              submitfunc(context);
+                              submitfunc();
                             },
                             child: Container(
                               // padding: EdgeInsets.all(12),
@@ -251,126 +249,136 @@ class _ProcessState extends State<Process> {
 
   void clearfunc() {
     setState(() {
-      coinNameController.text = "";
-      buyPriceController.text = "";
-      currentPriceController.text = "";
-      balanceController.text = "";
+      coinNameController.clear();
+      buyPriceController.clear();
+      currentPriceController.clear();
+      balanceController.clear();
+      commissionController.clear();
       currentPnL = 0;
       balancePnL = 0;
     });
   }
 
-  void submitfunc(BuildContext context) {
-    if (coinNameController.text.isNotEmpty &&
-        buyPriceController.text.isNotEmpty &&
-        currentPriceController.text.isNotEmpty) {
-      setState(() {
-        databaseHelper.addPnl(CoinPnL(
-            coinNameController.text.toUpperCase(),
-            buyPriceController.text,
-            currentPriceController.text,
-            balanceController.text,
-            currentPnL.toStringAsFixed(2),
-            balancePnL.toStringAsFixed(2),
-            commissionController.text,
-            DateTime.now().toString()));
-      });
+  void submitfunc() {
+    if (_areInputsValid()) {
+      databaseHelper.addPnl(CoinPnL(
+        coinNameController.text,
+        buyPriceController.text,
+        currentPriceController.text,
+        balanceController.text,
+        currentPnL.toStringAsFixed(2),
+        balancePnL.toStringAsFixed(2),
+        commissionController.text,
+        DateTime.now().toIso8601String(),
+      ));
       clearfunc();
       _saveData();
-      Navigator.push(context, MaterialPageRoute(
-        builder: (context) {
-          return TradeHistory();
-        },
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Trade saved successfully!"),
+        backgroundColor: Colors.green,
       ));
     }
   }
 
-  calculate(BuildContext context) {
-    if (coinNameController.text.isNotEmpty &&
-        buyPriceController.text.isNotEmpty &&
-        currentPriceController.text.isNotEmpty) {
+  bool calculate() {
+    if (_areInputsValid()) {
       setState(() {
         if (commissionController.text.isEmpty) {
           commissionController.text = "0";
         }
         try {
-          currentPnL = ((double.parse(currentPriceController.text) /
-                      double.parse(buyPriceController.text) *
-                      100) -
-                  100) *
-              (1 - ((double.parse(commissionController.text)) * 2));
+          final buyPrice = double.parse(buyPriceController.text);
+          final currentPrice = double.parse(currentPriceController.text);
+          final commission = double.tryParse(commissionController.text) ?? 0;
+
+          currentPnL =
+              (((currentPrice / buyPrice) - 1) * 100) * (1 - (commission * 2));
+          balancePnL =
+              currentPnL * (double.tryParse(balanceController.text) ?? 0) / 100;
         } catch (e) {
           currentPnL = 0;
-        }
-        if (balanceController.text.isEmpty) {
-          balanceController.text = "0";
-        }
-        try {
-          balancePnL =
-              double.parse(balanceController.text) * (currentPnL / 100);
-        } catch (e) {
           balancePnL = 0;
         }
       });
+      return true;
+    } else {
+      return false;
     }
   }
 
-  void mexcapi() async {
-    setState(() {
-      apiStatus = 2;
-    });
-    // print("api cagırıldı ->" + coinNameController.text.trim() + "deneme");
-    final snackBar = SnackBar(
-        content: Text(
-            'Fetching data for ${coinNameController.text.toUpperCase()}/USDT from Mexc, please wait...'),
-        duration: Duration(seconds: 15), // Snackbar'ın görüntüleme süres
-        backgroundColor: Colors.amber);
-    ScaffoldMessenger.of(context).showSnackBar(snackBar); // Snackbar'ı göster
+  Future<void> mexcapi() async {
+    if (coinNameController.text.isEmpty) return;
+    setState(() => apiStatus = 2);
 
-    final response = await http.get(Uri.parse(
-        'https://www.mexc.com/open/api/v2/market/ticker?symbol=${coinNameController.text.toLowerCase().trim()}_usdt'));
-    ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Snackbar'ı kapat
+    try {
+      final response = await http.get(Uri.parse(
+          'https://www.mexc.com/open/api/v2/market/ticker?symbol=${coinNameController.text.toLowerCase().trim()}_usdt'));
 
-    print(response);
-    print(response.statusCode);
-
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = json.decode(response.body);
-      final List<dynamic> data = responseData['data'];
-      if (data.isNotEmpty) {
-        final Map<String, dynamic> coinData = data[0];
-        final double coinPrice = double.parse(coinData['last']);
-        print('Coin Price: $coinPrice');
-        // currentPriceController.text = coinPrice.toStringAsFixed(2);
-        currentPriceController.text = coinPrice.toString();
-        // Snackbar'ı güncelleyerek işlem başarılı mesajını göster
-        final successSnackBar = SnackBar(
-            content: Text('Data fetched successfully from Mexc!'),
-            duration: Duration(seconds: 2),
-            backgroundColor: Colors.green);
-        ScaffoldMessenger.of(context).showSnackBar(successSnackBar);
-        setState(() {
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body)['data'];
+        if (data.isNotEmpty) {
+          currentPriceController.text =
+              double.parse(data[0]['last']).toStringAsFixed(2);
           apiStatus = 1;
-        });
-        calculate(context);
-        _saveData();
-      } else {
-        // Hata durumunda Snackbar ile kullanıcıya bilgi ver
-        final errorSnackBar = SnackBar(
-            content: Text('Failed to fetch data from Mexc!'),
-            duration: Duration(seconds: 2),
-            backgroundColor: Colors.red);
-        ScaffoldMessenger.of(context).showSnackBar(errorSnackBar);
-        print('No data available');
-        setState(() {
+        } else {
           apiStatus = 0;
-        });
-      }
-    } else {
-      print('Failed to load coin price');
-      setState(() {
+        }
+      } else {
         apiStatus = 0;
-      });
+      }
+    } catch (_) {
+      apiStatus = 0;
     }
+    if (calculate()) {
+      _saveData();
+    }
+
+    setState(() {});
+  }
+
+  void _showError(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Invalid Input'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Ok'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  bool _areInputsValid() {
+    if (coinNameController.text.isEmpty) {
+      _showError("Coin name cannot be empty.");
+      return false;
+    }
+    if (double.tryParse(buyPriceController.text) == null) {
+      _showError("Enter a valid buy price.");
+      return false;
+    }
+    if (double.tryParse(currentPriceController.text) == null) {
+      _showError("Enter a valid current price.");
+      return false;
+    }
+    if (commissionController.text.isNotEmpty &&
+        double.tryParse(commissionController.text) == null) {
+      _showError("Enter a valid value for commission or leave it blank.");
+      return false;
+    }
+    if (balanceController.text.isNotEmpty &&
+        double.tryParse(balanceController.text) == null) {
+      _showError("Enter a valid value for balance or leave it blank.");
+      return false;
+    }
+    return true;
   }
 }

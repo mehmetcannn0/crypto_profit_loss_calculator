@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import '../services/database_helper.dart';
 import 'trade_history.dart';
 
-// ignore: must_be_immutable
 class TradeHistoryEdit extends StatefulWidget {
   int id;
   TradeHistoryEdit(this.id, {super.key});
+
   @override
   State<TradeHistoryEdit> createState() => _TradeHistoryEditState();
 }
@@ -17,6 +17,7 @@ class _TradeHistoryEditState extends State<TradeHistoryEdit> {
   bool readed = false;
   double currentPnL = 0; //%
   double balancePnL = 0;
+
   @override
   void initState() {
     super.initState();
@@ -25,28 +26,32 @@ class _TradeHistoryEditState extends State<TradeHistoryEdit> {
 
   _loadData() async {
     coinPnL = await databaseHelper.getCoinPnLbyId(widget.id);
-    coinNameController.text = coinPnL.coinName!;
-    buyPriceController.text = coinPnL.buyPrice!;
-    currentPriceController.text = coinPnL.currentPrice!;
-    commissionController.text = coinPnL.commission!;
-    balanceController.text = coinPnL.balance!;
-    currentPnL = double.parse(coinPnL.currentPnL!);
-    balancePnL = double.parse(coinPnL.balancePnL!);
-    readed = true;
+    setState(() {
+      coinNameController.text = coinPnL.coinName!;
+      buyPriceController.text = coinPnL.buyPrice!;
+      currentPriceController.text = coinPnL.currentPrice!;
+      commissionController.text = coinPnL.commission!;
+      balanceController.text = coinPnL.balance!;
+      currentPnL = double.parse(coinPnL.currentPnL!);
+      balancePnL = double.parse(coinPnL.balancePnL!);
+      readed = true;
+    });
   }
 
   _saveData() {
-    calculate(context);
-    databaseHelper.updateCoinPnL(CoinPnL.withID(
-        coinPnL.id,
-        coinNameController.text,
-        buyPriceController.text,
-        currentPriceController.text,
-        balanceController.text,
-        currentPnL.toStringAsFixed(2),
-        balancePnL.toStringAsFixed(2),
-        commissionController.text,
-        coinPnL.date));
+    if (_areInputsValid()) {
+      calculate();
+      databaseHelper.updateCoinPnL(CoinPnL.withID(
+          coinPnL.id,
+          coinNameController.text,
+          buyPriceController.text,
+          currentPriceController.text,
+          balanceController.text,
+          currentPnL.toStringAsFixed(2),
+          balancePnL.toStringAsFixed(2),
+          commissionController.text,
+          coinPnL.date));
+    }
   }
 
   TextEditingController coinNameController = TextEditingController();
@@ -71,106 +76,87 @@ class _TradeHistoryEditState extends State<TradeHistoryEdit> {
                 ListTile(
                   title: TextField(
                     controller: coinNameController,
-                    decoration: InputDecoration(labelText: 'Coin Name'),
+                    decoration: const InputDecoration(labelText: 'Coin Name'),
                     textInputAction: TextInputAction.next,
                   ),
-                  trailing: Text("/usdt"),
+                  trailing: const Text("/usdt"),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 ListTile(
                   title: TextField(
                     controller: buyPriceController,
-                    decoration: InputDecoration(labelText: 'Buy Price'),
+                    decoration: const InputDecoration(labelText: 'Buy Price'),
                     textInputAction: TextInputAction.next,
                     keyboardType: TextInputType.number,
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 ListTile(
                   title: TextField(
                     controller: currentPriceController,
-                    decoration: InputDecoration(labelText: 'Current Price'),
+                    decoration:
+                        const InputDecoration(labelText: 'Current Price'),
                     textInputAction: TextInputAction.next,
                     keyboardType: TextInputType.number,
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 ListTile(
                   title: TextField(
                     controller: balanceController,
-                    decoration: InputDecoration(labelText: 'Balance Optional'),
+                    decoration:
+                        const InputDecoration(labelText: 'Balance Optional'),
                     textInputAction: TextInputAction.next,
                     keyboardType: TextInputType.number,
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 ListTile(
                   title: TextField(
                     controller: commissionController,
                     decoration:
-                        InputDecoration(labelText: 'Commission Optional'),
+                        const InputDecoration(labelText: 'Commission Optional'),
                     textInputAction: TextInputAction.done,
-                    onSubmitted: (value) => //submitfunc(context),
-                        calculate(context),
+                    onSubmitted: (value) => calculate(),
                     keyboardType: TextInputType.number,
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 10),
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 15),
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Expanded(
-                            child: Container(
-                                padding: EdgeInsets.all(8),
-                                color:
-                                    currentPnL <= 0 ? Colors.red : Colors.green,
-                                child:
-                                    Text("%" + currentPnL.toStringAsFixed(2))),
-                          ),
-                          // SizedBox(
-                          //   width: 9,
-                          // ),
                           Container(
-                              padding: EdgeInsets.all(8),
-                              color:
-                                  balancePnL <= 0 ? Colors.red : Colors.green,
-                              child:
-                                  Text(balancePnL.toStringAsFixed(1) + " \$")),
+                            padding: const EdgeInsets.all(8),
+                            color: currentPnL <= 0 ? Colors.red : Colors.green,
+                            child: Text("%${currentPnL.toStringAsFixed(2)}"),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            color: balancePnL <= 0 ? Colors.red : Colors.green,
+                            child: Text("${balancePnL.toStringAsFixed(1)} \$"),
+                          ),
                         ],
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           TextButton(
-                            onPressed: () {
-                              calculate(context);
-                            },
-                            child: Container(
-                              // padding: EdgeInsets.all(12),
-                              // color: Colors.black26,
-                              child: Text(
-                                style: TextStyle(color: Colors.white),
-                                'Calculate',
-                              ),
+                            onPressed: calculate,
+                            child: const Text(
+                              'Calculate',
+                              style: TextStyle(color: Colors.white),
                             ),
                           ),
                           TextButton(
-                            onPressed: () {
-                              submitfunc(context);
-                            },
-                            child: Container(
-                              // padding: EdgeInsets.all(12),
-                              // color: Colors.black26,
-                              child: Text(
-                                style: TextStyle(color: Colors.white),
-                                'Save',
-                              ),
+                            onPressed: submitfunc,
+                            child: const Text(
+                              'Save',
+                              style: TextStyle(color: Colors.white),
                             ),
                           ),
                         ],
@@ -186,42 +172,88 @@ class _TradeHistoryEditState extends State<TradeHistoryEdit> {
     );
   }
 
-  void submitfunc(BuildContext context) {
-    if (coinNameController.text.isNotEmpty &&
-        buyPriceController.text.isNotEmpty &&
-        currentPriceController.text.isNotEmpty) {
+  void submitfunc() {
+    if (_areInputsValid()) {
       _saveData();
       Navigator.pop(context);
-      Navigator.pop(context);
-      Navigator.push(
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) {
-            return const TradeHistory();
-          },
+          builder: (context) => const TradeHistory(),
         ),
       );
     }
   }
 
-  calculate(BuildContext context) {
-    if (coinNameController.text.isNotEmpty &&
-        buyPriceController.text.isNotEmpty &&
-        currentPriceController.text.isNotEmpty) {
+  bool calculate() {
+    if (_areInputsValid()) {
       setState(() {
         if (commissionController.text.isEmpty) {
           commissionController.text = "0";
         }
-        currentPnL = ((double.parse(currentPriceController.text) /
-                    double.parse(buyPriceController.text) *
-                    100) -
-                100) *
-            (1 - ((double.parse(commissionController.text)) * 2));
-        if (balanceController.text.isEmpty) {
-          balanceController.text = "0";
+        try {
+          final buyPrice = double.parse(buyPriceController.text);
+          final currentPrice = double.parse(currentPriceController.text);
+          final commission = double.tryParse(commissionController.text) ?? 0;
+
+          currentPnL =
+              (((currentPrice / buyPrice) - 1) * 100) * (1 - (commission * 2));
+          balancePnL =
+              currentPnL * (double.tryParse(balanceController.text) ?? 0) / 100;
+        } catch (e) {
+          currentPnL = 0;
+          balancePnL = 0;
         }
-        balancePnL = double.parse(balanceController.text) * (currentPnL / 100);
       });
+      return true;
+    } else {
+      return false;
     }
+  }
+
+  void _showError(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Invalid Input'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Ok'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  bool _areInputsValid() {
+    if (coinNameController.text.isEmpty) {
+      _showError("Coin name cannot be empty.");
+      return false;
+    }
+    if (double.tryParse(buyPriceController.text) == null) {
+      _showError("Enter a valid buy price.");
+      return false;
+    }
+    if (double.tryParse(currentPriceController.text) == null) {
+      _showError("Enter a valid current price.");
+      return false;
+    }
+    if (commissionController.text.isNotEmpty &&
+        double.tryParse(commissionController.text) == null) {
+      _showError("Enter a valid value for commission or leave it blank.");
+      return false;
+    }
+    if (balanceController.text.isNotEmpty &&
+        double.tryParse(balanceController.text) == null) {
+      _showError("Enter a valid value for balance or leave it blank.");
+      return false;
+    }
+    return true;
   }
 }

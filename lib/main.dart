@@ -111,9 +111,7 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
             child: Container(
               decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  color: currentPnL >= 0
-                      ? Theme.of(context).primaryColorLight
-                      : Colors.red),
+                  color: currentPnL >= 0 ? Colors.green : Colors.red),
               child: ListTile(
                 leadingAndTrailingTextStyle: TextStyle(fontSize: 20),
                 onTap: () => _navigateToProcessPage(i),
